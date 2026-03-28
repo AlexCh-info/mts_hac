@@ -29,6 +29,9 @@ ml_module/
 --/train_lgb.py
 
 Модуль анализа
+analys_module
+-/Analysis_final.ipynb
+
 ```
 
 ## Постановка задачи 
