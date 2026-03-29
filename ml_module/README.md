@@ -369,3 +369,8 @@ model = lgb.LGBMRegressor(
 
 
 # 
+# Пока без названия
+## Решение разработал: Чиликин Александр (ML-engineer)
+Ссылка на Google Disk: https://drive.google.com/drive/folders/1KjRhedxerQenK1aI5kppFEcr-Ygyuk6m?usp=drive_link
+
+Веса, датасеты, графики и др. файлы, которые по некоторым причинам не поместились в репозиторий лежат на гугл диске.
