@@ -10,7 +10,6 @@
 analys_module/
 - /Png
 -- mts_heatmaps.png
--- mts_zones_map.png
 -- mts_3zone_clustering.png
 -- mts_dashboard.png
 - Analysis_final.ipynb
