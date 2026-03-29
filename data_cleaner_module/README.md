@@ -159,13 +159,147 @@ data_cleaner_module/
 Этот шаг важен т.к. он позволяет более подробно изучить качество и природу данных, весь анализ сохранен в json (data_quality.json)
 
 #### Как запустить data_quality_analyzer.py
-Есть два пути:
-  1.  Добавить импорт в модуль main.py
-      ``` from src.data_quality_analyzer.py  import DataQualityAnalyzer```
-      И уже в дальнейшем вызывать нужные нам функции через экземпляр класса.
-  2.  В конце файла после всех объявлений дописать функцию вызова:
-      ``` if __name__ == '__main__': ```
-      Там создать экземпляр класса и вызывать нужные функции, вся информация будет отображаться в логах.
+Вариант 1: Анализ после очистки (рекомендуется)
+```
+# В main.py — добавить после этапа очистки:
+
+from src.data_quality import DataQualityAnalyzer
+
+def main(args):
+    # ... существующий код очистки ...
+    
+    #НОВЫЙ ЭТАП: Анализ качества
+    logger.info("ШАГ X: Анализ качества очищенных данных")
+    
+    analyzer = DataQualityAnalyzer()
+    
+    # Анализируем оба источника
+    report_a = analyzer.analyze_source(gdf_a_clean, "Source_A")
+    report_b = analyzer.analyze_source(gdf_b_clean, "Source_B")
+    
+    # Экспорт сводного отчёта
+    analyzer.export_report(config.RESULTS_DIR / 'quality_assessment.json')
+    
+    # Блокеров для продолжения пайплайна
+    if report_a['topological_correctness']['validity_rate'] < 90:
+        logger.warning("Низкое качество геометрии в Source А!")
+    
+    # ... продолжение пайплайна (слияние, признаки) ...
+```
+Вариант 2: Анализ сырых данных (для аудита источника)
+```
+# audit_raw_data.py — проверка качества до любой обработки
+from src.data_loader import load_source
+from src.data_quality import DataQualityAnalyzer
+from config.config import config
+
+analyzer = DataQualityAnalyzer()
+
+# Загружаем "как есть", без очистки
+gdf_raw = load_source(str(config.SOURCE_A), geometry_col='geometry')
+
+# Анализируем
+report = analyzer.analyze_source(gdf_raw, source_name="Source_A_RAW")
+
+# Выводим "красные флаги"
+print("\n Критические проблемы:")
+for rec in report['recommendations']:
+    if rec.startswith('!') or 'невалид' in rec.lower():
+        print(f"{rec}")
+```
+Вариант-3: Запуск с команной строки (оболочка на файл)
+```
+#!/usr/bin/env python3
+"""
+CLI для анализа качества геоданных.
+Пример: python analyze_quality.py --source A --export
+"""
+
+import argparse
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent))
+
+from config.config import config
+from src.data_cleaner import DataCleaner
+from src.data_quality import DataQualityAnalyzer
+
+def main():
+    parser = argparse.ArgumentParser(description='Анализ качества геоданных')
+    parser.add_argument('--source', choices=['A', 'B', 'both'], default='both',
+                        help='Какой источник анализировать')
+    parser.add_argument('--raw', action='store_true', 
+                        help='Анализировать сырые данные (без очистки)')
+    parser.add_argument('--export', action='store_true',
+                        help='Экспортировать отчёт в JSON')
+    parser.add_argument('--strict', action='store_true',
+                        help='Выйти с ошибкой при критических проблемах')
+    
+    args = parser.parse_args()
+    
+    analyzer = DataQualityAnalyzer()
+    exit_code = 0
+    
+    sources = [('A', config.SOURCE_A, 'geometry'), ('B', config.SOURCE_B, 'wkt')]
+    if args.source != 'both':
+        sources = [s for s in sources if s[0] == args.source]
+    
+    for src_name, src_path, geom_col in sources:
+        print(f"\nАнализ источника {src_name}: {src_path.name}")
+        
+        # Загрузка
+        if args.raw:
+            from src.data_loader import load_source
+            gdf = load_source(str(src_path), geometry_col=geom_col)
+        else:
+            cleaner = DataCleaner(f"QualityCheck_{src_name}")
+            gdf = cleaner.load_and_clean(str(src_path), geometry_col=geom_col)
+        
+        # Анализ
+        report = analyzer.analyze_source(gdf, f"{src_name}_{'raw' if args.raw else 'clean'}")
+        
+        # Вывод рекомендаций
+        if report['recommendations']:
+            print("\nРекомендации:")
+            for rec in report['recommendations']:
+                print(f"{rec}")
+        
+        # Strict mode: проверка критических порогов
+        if args.strict:
+            if report['topological_correctness']['validity_rate'] < 85:
+                print(f"Критически низкое качество геометрии!")
+                exit_code = 1
+            if report['completeness']['overall'] < 70:
+                print(f"Недостаточная полнота данных!")
+                exit_code = 1
+    
+    # Экспорт
+    if args.export:
+        path = analyzer.export_report(config.RESULTS_DIR / 'quality_report.json')
+        print(f"\nОтчёт сохранён: {path}")
+    
+    sys.exit(exit_code)
+
+if __name__ == '__main__':
+    main()
+```
+Запуск
+```
+# Анализ обоих очищенных источников
+python analyze_quality.py
+
+# Только источник А, сырые данные
+python analyze_quality.py --source A --raw
+
+# С экспортом отчёта
+python analyze_quality.py --export
+
+# Строгий режим (выход с ошибкой при проблемах)
+python analyze_quality.py --strict
+
+# Комбинация: анализ Б + экспорт + строгий режим
+python analyze_quality.py --source B --export --strict
+```
 
 ### Третий шаг 
 В data_cleaner.py реализована логика третьего шага.
@@ -424,23 +558,114 @@ FeatureEngineer
   -  feat_x_coord и feat_y_coord - нормированные координаты
   -  feat_h3_index - индекс геохеша системы H3
 
-## Описание признаков (feature_engineering.py)
-В результате работы пайплайна исходные сырые данные были преобразованы в набор из 14 признаков, готовых для обучения модели МО.
+### Метод _add_neighborhood_features: признаки окружения
+Алгоритм работы
 
-| Признак | Тип данных | Роль | Описание |
-| :--- | :--- | :--- | :--- |
-| `is_train` | Boolean | Системный | Флаг разделения выборки (True = Train, False = Test) |
-| `height` | Float | **Target** | Целевая переменная (высота здания в метрах) |
-| `source_type` | String | Метаданные | Статус мэтчинга (`Matched (A+B)`, `Only A`, `Only B`) |
-| `floors_merged` | Float | Предиктор | Объединенная этажность (приоритет источника Б) |
-| `final_area_sqm` | Float | Предиктор | Точная площадь фундамента в метрах (EPSG:32636) |
-| `perimeter` | Float | Предиктор | Периметр полигона здания в метрах |
-| `compactness` | Float | Предиктор | Индекс формы здания (от 0 до 1) |
-| `centroid_x`, `centroid_y`| Float | Предиктор | Метрические координаты центроида |
-| `lat`, `lon` | Float | Предиктор | Географические координаты центроида (WGS84) |
-| `tags` | String | Предиктор | Теги из источника А (через запятую) |
-| `purpose_of_building` | String | Предиктор | Назначение здания из источника Б |
-| `geometry` | Geometry| Гео-объект | Финальный валидный контур здания |
+Построение пространственного индекса: Для ускорения поиска соседей используется структура данных cKDTree из SciPy. Координаты центроидов всех объектов в gdf_all преобразуются в массив и передаются в конструктор дерева. Это позволяет выполнять поиск всех соседей в заданном радиусе за время O(log n) вместо O(n) при наивном переборе.
 
+Итерация по радиусам: Метод перебирает список радиусов из конфигурации (NEIGHBOR_RADII_METERS, по умолчанию [25, 50, 100, 200] метров). Для каждого радиуса вычисляются четыре типа статистик:
 
+  -  Количество соседей (feat_neighbor_count_{radius}m) — число объектов в заданном радиусе, исключая само здание.
+  -  Cредняя площадь соседей (feat_avg_neighbor_area_{radius}m) — аналогично высоте, но для площади.
+  -  Плотность застройки (feat_density_{radius}m) — количество соседей на гектар площади круга заданного радиуса.
 
+### Метод _add_categorical_features: кодирование категориальных признаков
+Пример работы:
+```
+Входной текст: "жилое здание, 5 этажей, кирпич"
+Ключевые слова residential: ['жилое', 'жилой', 'residential', 'апартамент']
+Результат: 'residential' (так как 'жилое' найдено в тексте)
+```
+Обработка неизвестных категорий: Если ни одно ключевое слово не найдено, возвращается значение 'other'. 
+Это предотвращает потерю данных и позволяет модели учиться на остаточной категории.
+
+Кодирование через LabelEncoder
+
+Обучение на тренировочных данных: Если is_train=True, создаётся новый LabelEncoder, который обучается на уникальных значениях признака feat_building_type. Метод fit_transform преобразует строковые категории в целые числа (0, 1, 2, ...), сохраняя отображение внутри энкодера.
+Применение на тестовых данных: Если is_train=False, метод ищет ранее сохранённый энкодер в словаре self.label_encoders. Если энкодер найден, применяется transform с обработкой неизвестных категорий: значения, не встречавшиеся при обучении, получают код -1.
+
+Метод _is_residential проверяет наличие ключевых слов жилого типа в тегах или назначении здания.
+Результат — бинарный признак feat_is_residential (1 для жилых, 0 для остальных).
+
+Если в данных присутствует колонка district, она обрабатывается аналогично типу здания: извлечение → кодирование → обработка неизвестных значений. Если колонка отсутствует, признак получает значение 0, что эквивалентно «район неизвестен».
+
+### Метод _add_statistical_features: статистические нормализации
+  -  Z-score стандартизация - Z-score показывает, на сколько стандартных отклонений значение отклоняется от среднего. Например, z = 2.0 означает, что значение на два стандартных отклонения выше среднего.
+  -  Квантильное ранжирование - quantile = rank(pct=True) — процентный ранг значения в распределении. Например, квантиль 0.95 означает, что значение больше 95% наблюдений.
+
+### Метод _add_address_features: признаки адресной информации
+Бинарные индикаторы:
+  -  feat_has_address — равен 1, если поле gkh_address не пустое; 0 иначе.
+  -  feat_has_number — аналогично для поля number (номер дома).
+
+Композитный признак полноты:
+  -  feat_address_completeness — среднее арифметическое двух бинарных признаков. Принимает значения 0.0 (нет ни адреса, ни номера), 0.5 (есть что-то одно) или 1.0 (есть и то, и другое).
+
+# Примеры использования
+```
+from src.feature_engineering import FeatureEngineer
+from config.config import config
+
+# Подготовка данных (после очистки и слияния)
+gdf_merged = ...  # GeoDataFrame с объединёнными данными
+
+# Инициализация и генерация
+fe = FeatureEngineer()
+gdf_with_features = fe.extract_all_features(
+    gdf_merged,
+    is_train=True,           # Обучаем кодировщики
+    gdf_all=gdf_merged       # Используем весь датасет для признаков окружения
+)
+
+# Получение матрицы признаков для модели
+feature_cols = fe.get_feature_columns()
+X = gdf_with_features[feature_cols]
+y = gdf_with_features['final_height_m']  # Целевая переменная
+
+# Экспорт статистики для аудита
+fe.export_feature_stats(gdf_with_features, 'results/feature_stats_train.csv')
+```
+# Сценарий инференса: генерация признаков для новых данных
+```
+# Предположим, модель уже обучена, и есть сохранённый FeatureEngineer
+# (на практике инженер признаков нужно сериализовать вместе с моделью)
+
+fe = load_feature_engineer('models/feature_engineer.pkl')  # Псевдокод
+
+# Новые данные для предсказания
+gdf_new = ...  # GeoDataFrame с новыми зданиями
+
+# Генерация признаков в тестовом режиме
+gdf_pred = fe.extract_all_features(
+    gdf_new,
+    is_train=False,          # Используем сохранённые кодировщики
+    gdf_all=gdf_new          # Для признаков окружения используем только новые данные
+)
+
+# Предсказание
+X_pred = gdf_pred[fe.get_feature_columns()]
+predictions = model.predict(X_pred)
+```
+# Отладка: проверка сгенерированных признаков
+```
+# Быстрый просмотр статистики по признакам
+import pandas as pd
+
+fe = FeatureEngineer()
+gdf_feat = fe.extract_all_features(gdf_sample, is_train=True, gdf_all=gdf_sample)
+
+# Выборка числовых признаков для анализа
+numeric_feats = [c for c in gdf_feat.columns if c.startswith('feat_') 
+                 and gdf_feat[c].dtype in ['float64', 'int64']]
+
+print(gdf_feat[numeric_feats].describe().T[['mean', 'std', 'min', 'max', 'count']])
+
+# Проверка на пропуски
+null_summary = gdf_feat[numeric_feats].isna().sum().sort_values(ascending=False)
+print("Пропуски в признаках:")
+print(null_summary[null_summary > 0])
+```
+# Challenge IT CUP 26 | MTS TRUE TECH.
+# Команда Пока без названия.
+Ссылка на Google Disk: https://drive.google.com/drive/folders/1KjRhedxerQenK1aI5kppFEcr-Ygyuk6m?usp=drive_link
+Веса, датасеты, графики и др. файлы, которые по некоторым причинам не поместились в репозиторий лежат гугл диске.
