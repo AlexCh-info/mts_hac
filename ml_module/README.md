@@ -366,3 +366,6 @@ model = lgb.LGBMRegressor(
 
   -  7 fold
 <img width="640" height="480" alt="Figure_7_7k_boost" src="https://github.com/user-attachments/assets/67c3db42-7615-4671-b5cc-037c3d42ae7a" />
+
+
+# 
