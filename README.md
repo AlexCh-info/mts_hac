@@ -62,7 +62,6 @@ mts_hac/
 --public/
 --src/
 *в public и src содержаться технические файлы, bin файлы и тд
--- README.md
 
 - README.md
 - LICENSE
