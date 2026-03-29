@@ -668,4 +668,5 @@ print(null_summary[null_summary > 0])
 # Challenge IT CUP 26 | MTS TRUE TECH.
 # Команда Пока без названия.
 Ссылка на Google Disk: https://drive.google.com/drive/folders/1KjRhedxerQenK1aI5kppFEcr-Ygyuk6m?usp=drive_link
+
 Веса, датасеты, графики и др. файлы, которые по некоторым причинам не поместились в репозиторий лежат гугл диске.
