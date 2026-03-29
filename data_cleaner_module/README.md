@@ -13,6 +13,7 @@ data_cleaner_module/
 --/data_merge.py
 --/feature_engineering.py
 --/main.py
+--/data_quality_report.json
 --/data_quality_analyzer.py
 ```
 # Термины и сокращения
