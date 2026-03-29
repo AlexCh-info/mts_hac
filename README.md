@@ -50,7 +50,7 @@ mts_hac/
 -- __init__.py
 -- README.md
 
-- analys_module/         
+- analysis_module/         
 -- Png/
 --- mts_3zone_clustering.png
 --- mts_dashboard.png
