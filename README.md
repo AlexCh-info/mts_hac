@@ -59,7 +59,9 @@ mts_hac/
 -- README.md
 
 - web_visualization_module/
--- ...
+--public/
+--src/
+*в public и src содержаться технические файлы, bin файлы и тд
 -- README.md
 
 - README.md
