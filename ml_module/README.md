@@ -231,25 +231,25 @@ model = lgb.LGBMRegressor(
 
 Так же посмотрим на важность признаков, которые выводит LughtGBM:
 
-1 fold 
+  -  1 fold 
 <img width="640" height="480" alt="Figure_1" src="https://github.com/user-attachments/assets/83cc91e5-8328-41f4-a00a-49bffa324249" />
 
-2 fold
+  -  2 fold
 <img width="640" height="480" alt="Figure_2" src="https://github.com/user-attachments/assets/cdde8938-1a52-4717-afb4-d3e2e109999d" />
 
-3 fold
+  -  3 fold
 <img width="640" height="480" alt="Figure_3" src="https://github.com/user-attachments/assets/fd4be91a-0059-4a08-b067-22fab3e34003" />
 
-4 fold
+  -  4 fold
 <img width="640" height="480" alt="Figure_4" src="https://github.com/user-attachments/assets/22e0c0dd-55b3-413a-8c56-9586042a1280" />
 
-5 fold
+  -  5 fold
 <img width="640" height="480" alt="Figure_5" src="https://github.com/user-attachments/assets/d1ccdcdb-439f-462a-8ef3-1b723800b8ae" />
 
-6 fold
+  -  6 fold
 <img width="640" height="480" alt="Figure_6" src="https://github.com/user-attachments/assets/e06aa2d4-b814-4404-93cf-7e3d890391a0" />
 
-7 fold
+  -  7 fold
 <img width="640" height="480" alt="Figure_7" src="https://github.com/user-attachments/assets/4eb65089-19bb-4445-986d-51628af7085a" />
 
 
@@ -292,25 +292,25 @@ model = lgb.LGBMRegressor(
 Посмотрим на графики:
 
 1 fold
-<img width="640" height="480" alt="Figure_1_5k" src="https://github.com/user-attachments/assets/f21cd957-a17f-4b33-97ec-1a60367d536c" />
+  -  <img width="640" height="480" alt="Figure_1_5k" src="https://github.com/user-attachments/assets/f21cd957-a17f-4b33-97ec-1a60367d536c" />
 
 2 fold
-<img width="640" height="480" alt="Figure_2_5k" src="https://github.com/user-attachments/assets/3bade0a2-50d5-43b2-85f7-3604cb8e21b1" />
+  -  <img width="640" height="480" alt="Figure_2_5k" src="https://github.com/user-attachments/assets/3bade0a2-50d5-43b2-85f7-3604cb8e21b1" />
 
 3 fold
-<img width="640" height="480" alt="Figure_3_5k" src="https://github.com/user-attachments/assets/33328d1b-efda-4e60-8b6b-3208322020a3" />
+  -  <img width="640" height="480" alt="Figure_3_5k" src="https://github.com/user-attachments/assets/33328d1b-efda-4e60-8b6b-3208322020a3" />
 
 4 fold
-<img width="640" height="480" alt="Figure_4_5k" src="https://github.com/user-attachments/assets/44a33714-6eb6-430e-aae6-5ac7721515fa" />
+  -  <img width="640" height="480" alt="Figure_4_5k" src="https://github.com/user-attachments/assets/44a33714-6eb6-430e-aae6-5ac7721515fa" />
 
 5 fold
-<img width="640" height="480" alt="Figure_5_5л" src="https://github.com/user-attachments/assets/a1f5a30c-bfe8-41da-8954-17671b62261e" />
+  -  <img width="640" height="480" alt="Figure_5_5л" src="https://github.com/user-attachments/assets/a1f5a30c-bfe8-41da-8954-17671b62261e" />
 
 6 fold
-<img width="640" height="480" alt="Figure_6_6k" src="https://github.com/user-attachments/assets/96dbd6f4-fbf2-46ec-b3eb-584ac2c7c94a" />
+  -  <img width="640" height="480" alt="Figure_6_6k" src="https://github.com/user-attachments/assets/96dbd6f4-fbf2-46ec-b3eb-584ac2c7c94a" />
 
 7 fold
-<img width="640" height="480" alt="Figure_7_5k" src="https://github.com/user-attachments/assets/f2018de9-d6f3-4805-b00d-bc889a974589" />
+  -  <img width="640" height="480" alt="Figure_7_5k" src="https://github.com/user-attachments/assets/f2018de9-d6f3-4805-b00d-bc889a974589" />
 
 Вывод:
 Такой низкий результат rmse не утечка данных, первый признак связанный с высотой находится на 5 месте, так что модель научилась правильно учитывать признаки, это хороший результат.
@@ -346,23 +346,23 @@ model = lgb.LGBMRegressor(
 
 Чтобы убедиться что это опять не утечка данных, посмотрим на графики:
 
-1 fold
+  -  1 fold
 <img width="640" height="480" alt="Figure_1_7k_boost" src="https://github.com/user-attachments/assets/0abd61bb-42d6-4a56-8a36-eae87cc1f1e4" />
 
-2 fold
+  -  2 fold
 <img width="640" height="480" alt="Figure_2_7k_boost" src="https://github.com/user-attachments/assets/e531b9b2-ad6c-4923-ad2b-b75c2eb2bee4" />
 
-3 fold
+  -  3 fold
 <img width="738" height="480" alt="Figure_3_7k" src="https://github.com/user-attachments/assets/169bdba4-7e4a-4b5e-98c8-bc5963c139ac" />
 
-4 fold
+  -  4 fold
 <img width="640" height="480" alt="Figure_4_7k_boost" src="https://github.com/user-attachments/assets/1c4c431c-6116-4fb2-bdd7-b5b5021fff6c" />
 
-5 fold
+  -  5 fold
 <img width="640" height="480" alt="Figure_5_7k_boost" src="https://github.com/user-attachments/assets/0db6778c-c454-451c-8221-cfc3efa44360" />
 
-6 fold
+  -  6 fold
 <img width="640" height="480" alt="Figure_6_7k_boost" src="https://github.com/user-attachments/assets/fd3b90d7-f6ae-4bcf-8bf0-4d49c6591a5c" />
 
-7 fold
+  -  7 fold
 <img width="640" height="480" alt="Figure_7_7k_boost" src="https://github.com/user-attachments/assets/67c3db42-7615-4671-b5cc-037c3d42ae7a" />
