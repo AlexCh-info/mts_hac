@@ -369,7 +369,7 @@ model = lgb.LGBMRegressor(
 
 
 # 
-# Пока без названия
+# Команда: Пока без названия. Специально для Challenger IT CUP 26. MTS TRUE TECH.
 ## Решение разработал: Чиликин Александр (ML-engineer)
 Ссылка на Google Disk: https://drive.google.com/drive/folders/1KjRhedxerQenK1aI5kppFEcr-Ygyuk6m?usp=drive_link
 
