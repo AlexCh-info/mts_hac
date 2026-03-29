@@ -23,6 +23,7 @@ ml_module/
   5.  Веса - в контексте МО, степень важности, чем выше вес, тем важнее признак.
   6.  Кросс Валидация - Техника при которой, данные деляться на части например на 4, 3 из этих частей попадают в тренировочную выборку, 1 часть в валидационную, в ходе обучения каждая часть данных попадает в валидационную выборку.
   7.  Фолд (Fold) - часть данных при кросс валидации.
+  8.  fine-tuning - Процесс дообучение модели, для повышения качества ее работы.
 
 # Ход работы
 ## Изучение задачи
@@ -144,12 +145,12 @@ model = lgb.LGBMRegressor(
 ```
 model = lgb.LGBMRegressor(
         n_estimators=2000,
-        learning_rate=0.003,
+        learning_rate=0.02,
         max_depth=-1,
         num_leaves=128,
         min_child_samples=10,
-        subsample=0.9,
-        colsample_bytree=0.9,
+        subsample=0.8,
+        colsample_bytree=0.8,
         random_state=42
     )
 
@@ -168,18 +169,17 @@ model = lgb.LGBMRegressor(
 
 Ее средний rmse = 16.2м
 Уже лучше, но это все равно много.
-
 
 ## 2 этап fine tuning
-На втором этапе fine tuning я начал поднимать параметры 
-Вторая концигурация модели выглядила вот так:
+На втором этапе fine tuning я сильно увеличил параметры n_estimators, num_leaves, subsamle, colasample_bytree, снизил скорость обучения
+Третья концигурация модели выглядила вот так:
 ```
 model = lgb.LGBMRegressor(
-        n_estimators=2000,
-        learning_rate=0.003,
+        n_estimators=4000,
+        learning_rate=0.01,
         max_depth=-1,
-        num_leaves=128,
-        min_child_samples=10,
+        num_leaves=256,
+        min_child_samples=5,
         subsample=0.9,
         colsample_bytree=0.9,
         random_state=42
@@ -196,23 +196,80 @@ model = lgb.LGBMRegressor(
     )
 ```
 
-Мы повысили кол-во эпох, снизили скорость обучения и изменили чуть чуть другие параметры такие как num_leaves, min_child_samples и т.д.
+Обучение идет стабильно, но на этом этапе я заметил, что нынешними признаками модель уперлась в потолок и ниже 14м ошибки она не могла показать.
+Нужны были новые признаки, чтобы модель отталкивалась не только от геометрических параметров и т.д., но и от расположения здания (h3 index) и други факторов,
+сделать это нужно было так, чтобы не вызвать новый поток утечки информации.
 
-Ее средний rmse = 16.2м
-Уже лучше, но это все равно много.
+На данном этапе были добавлены признаки:
+  1.  X_clean["h3_area_std"] - Стандартное отклонение площадей зданий внутри одной ячейки H3.
+  2.  X_clean["h3_density_mean"] - Средняя плотность застройки (зданий на гектар) в радиусе 50 м по всем объектам внутри ячейки H3.
+  3.  X_clean["h3_building_count"] - Количество зданий, попавших в ту же ячейку H3.
+  4.  X_clean["h3_parent"] - Префикс H3-индекса, соответствующий ячейке более крупного разрешения (родительская ячейка).
+  5.  X_clean["h3_parent_area_mean"] - Средняя площадь зданий в родительской ячейке H3.
+  6.  X_clean["h3_parent_density"] - Средняя плотность застройки в радиусе 50 м по всей родительской ячейке H3.
+  7.  X_clean["area_x_density"] - Произведение площади здания на локальную плотность застройки.
+  8.  X_clean["area_x_neighbors"] - Произведение площади здания на количество соседей в радиусе 50 м.
+  9.  X_clean["density_x_neighbors"] - Произведение плотности застройки на количество соседей.
+  10.  X_clean["coord_sum"], X_clean["coord_diff"] - Линейные комбинации координат, соответствующие повороту системы координат на 45°.
+  11.  X_clean["density_log"] - Логарифм (с добавлением 1) признака плотности застройки.
+  12.  X_clean["is_zero_density"] - Бинарный индикатор: 1, если в радиусе 50 м нет других зданий; 0 — иначе.
+  13.  X_clean["area_bin"] - Десятичный квантильный бин площади здания (от 0 до 9).
+  14.  X_clean["h3_int"] - Целочисленное представление шестнадцатеричного H3-индекса.
+  15.  X_clean["h3_area_mean"] - Средняя площадь зданий внутри ячейки H3 (повторная агрегация, но уже после добавления других признаков).
+  16.  X_clean["radius"] -  Евклидово расстояние от начала координат (0, 0) в метрической проекции до центроида здания.
+  17.  X_clean["angle"] - Угол в радианах между положительной осью X и вектором от начала координат до здания.
+
+Так же прологарифмировалти  target переменную, чтобы модель лучше понимала ее.
+Зачем нужно:
+  -  Стабилизация дисперсии: Высота зданий имеет правостороннее распределение (много низких, мало очень высоких). Логарифм делает распределение более симметричным.
+  -  Улучшение метрик: Ошибка в предсказании 10 м для здания высотой 100 м менее критична, чем для здания высотой 5 м. Логарифмическая шкала учитывает относительную ошибку.
+  -  Совместимость с моделью: Многие алгоритмы (особенно линейные и градиентный бустинг) лучше работают с нормально распределённой целевой переменной.
+
+Ее средний rmse = 14.4м
+
+Так же посмотрим на важность признаков, которые выводит LughtGBM:
+
+1 fold 
+<img width="640" height="480" alt="Figure_1" src="https://github.com/user-attachments/assets/83cc91e5-8328-41f4-a00a-49bffa324249" />
+
+2 fold
+<img width="640" height="480" alt="Figure_2" src="https://github.com/user-attachments/assets/cdde8938-1a52-4717-afb4-d3e2e109999d" />
+
+3 fold
+<img width="640" height="480" alt="Figure_3" src="https://github.com/user-attachments/assets/fd4be91a-0059-4a08-b067-22fab3e34003" />
+
+4 fold
+<img width="640" height="480" alt="Figure_4" src="https://github.com/user-attachments/assets/22e0c0dd-55b3-413a-8c56-9586042a1280" />
+
+5 fold
+<img width="640" height="480" alt="Figure_5" src="https://github.com/user-attachments/assets/d1ccdcdb-439f-462a-8ef3-1b723800b8ae" />
+
+6 fold
+<img width="640" height="480" alt="Figure_6" src="https://github.com/user-attachments/assets/e06aa2d4-b814-4404-93cf-7e3d890391a0" />
+
+7 fold
+<img width="640" height="480" alt="Figure_7" src="https://github.com/user-attachments/assets/4eb65089-19bb-4445-986d-51628af7085a" />
+
+
+По этим графикам можно следать вывод, что в топе присутствуют значения, которые так или инчане связаны с target переменной, убираем их:
+  -  B_number
+  -  match_iou
+  -  matched_id_b
 
 ## 3 этап fine tuning
-На первом этапе я с опаской менял конфигурацию модели, у меня в голове была допустимая ошибка (это 3м), результат до которого надо дойти.
-Вторая концигурация модели выглядила вот так:
+На третьем этапе fine tuning я подобрал уже финальную конфигурацию, которая должна показывать стабильные результаты.
+Осталось сделать правки и добавить несколько признаков.
 ```
 model = lgb.LGBMRegressor(
-        n_estimators=2000,
-        learning_rate=0.003,
+        n_estimators=7000,
+        learning_rate=0.008,
         max_depth=-1,
-        num_leaves=128,
-        min_child_samples=10,
+        num_leaves=512,
+        min_child_samples=3,
         subsample=0.9,
         colsample_bytree=0.9,
+        reg_alpha=0.3,
+        reg_lambda=0.3,
         random_state=42
     )
 
@@ -227,23 +284,48 @@ model = lgb.LGBMRegressor(
     )
 ```
 
-Мы повысили кол-во эпох, снизили скорость обучения и изменили чуть чуть другие параметры такие как num_leaves, min_child_samples и т.д.
+Ее средний rmse = ~4м 
+Это действительно хорошо, близко к тому результату, к которому я стремился, однако мы можем лучше.
 
-Ее средний rmse = 16.2м
-Уже лучше, но это все равно много.
+Посмотрим на графики:
 
-## 4 этап fine tuning
-На первом этапе я с опаской менял конфигурацию модели, у меня в голове была допустимая ошибка (это 3м), результат до которого надо дойти.
-Вторая концигурация модели выглядила вот так:
+1 fold
+<img width="640" height="480" alt="Figure_1_5k" src="https://github.com/user-attachments/assets/f21cd957-a17f-4b33-97ec-1a60367d536c" />
+
+2 fold
+<img width="640" height="480" alt="Figure_2_5k" src="https://github.com/user-attachments/assets/3bade0a2-50d5-43b2-85f7-3604cb8e21b1" />
+
+3 fold
+<img width="640" height="480" alt="Figure_3_5k" src="https://github.com/user-attachments/assets/33328d1b-efda-4e60-8b6b-3208322020a3" />
+
+4 fold
+<img width="640" height="480" alt="Figure_4_5k" src="https://github.com/user-attachments/assets/44a33714-6eb6-430e-aae6-5ac7721515fa" />
+
+5 fold
+<img width="640" height="480" alt="Figure_5_5л" src="https://github.com/user-attachments/assets/a1f5a30c-bfe8-41da-8954-17671b62261e" />
+
+6 fold
+<img width="640" height="480" alt="Figure_6_6k" src="https://github.com/user-attachments/assets/96dbd6f4-fbf2-46ec-b3eb-584ac2c7c94a" />
+
+7 fold
+<img width="640" height="480" alt="Figure_7_5k" src="https://github.com/user-attachments/assets/f2018de9-d6f3-4805-b00d-bc889a974589" />
+
+Вывод:
+Такой низкий результат rmse не утечка данных, первый признак связанный с высотой находится на 5 месте, так что модель научилась правильно учитывать признаки, это хороший результат.
+
+## 4 этап fine tuning (последний)
+На этом этапе fine tuning я добавил несколько новых признаков и немного изменил логику программы, посмотреть финальную версию модели можно в файле train_lgb.py
 ```
-model = lgb.LGBMRegressor(
-        n_estimators=2000,
-        learning_rate=0.003,
+    model = lgb.LGBMRegressor(
+        n_estimators=7000,
+        learning_rate=0.008,
         max_depth=-1,
-        num_leaves=128,
-        min_child_samples=10,
+        num_leaves=512,
+        min_child_samples=3,
         subsample=0.9,
         colsample_bytree=0.9,
+        reg_alpha=0.3,
+        reg_lambda=0.3,
         random_state=42
     )
 
@@ -258,7 +340,27 @@ model = lgb.LGBMRegressor(
     )
 ```
 
-Мы повысили кол-во эпох, снизили скорость обучения и изменили чуть чуть другие параметры такие как num_leaves, min_child_samples и т.д.
+Ее средний rmse = ~3.1м. Это отличный результат.
 
-Ее средний rmse = 16.2м
-Уже лучше, но это все равно много.
+Чтобы убедиться что это опять не утечка данных, посмотрим на графики:
+
+1 fold
+<img width="640" height="480" alt="Figure_1_7k_boost" src="https://github.com/user-attachments/assets/0abd61bb-42d6-4a56-8a36-eae87cc1f1e4" />
+
+2 fold
+<img width="640" height="480" alt="Figure_2_7k_boost" src="https://github.com/user-attachments/assets/e531b9b2-ad6c-4923-ad2b-b75c2eb2bee4" />
+
+3 fold
+<img width="738" height="480" alt="Figure_3_7k" src="https://github.com/user-attachments/assets/169bdba4-7e4a-4b5e-98c8-bc5963c139ac" />
+
+4 fold
+<img width="640" height="480" alt="Figure_4_7k_boost" src="https://github.com/user-attachments/assets/1c4c431c-6116-4fb2-bdd7-b5b5021fff6c" />
+
+5 fold
+<img width="640" height="480" alt="Figure_5_7k_boost" src="https://github.com/user-attachments/assets/0db6778c-c454-451c-8221-cfc3efa44360" />
+
+6 fold
+<img width="640" height="480" alt="Figure_6_7k_boost" src="https://github.com/user-attachments/assets/fd3b90d7-f6ae-4bcf-8bf0-4d49c6591a5c" />
+
+7 fold
+<img width="640" height="480" alt="Figure_7_7k_boost" src="https://github.com/user-attachments/assets/67c3db42-7615-4671-b5cc-037c3d42ae7a" />
