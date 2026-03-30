@@ -368,8 +368,8 @@ model = lgb.LGBMRegressor(
 <img width="640" height="480" alt="Figure_7_7k_boost" src="https://github.com/user-attachments/assets/67c3db42-7615-4671-b5cc-037c3d42ae7a" />
 
 
-# Challenge IT CUP 26 | MTS TRUE TECH.
-# Команда: Пока без названия. 
+# Challenge IT CUP 26 | MTS TRUE TECH
+# Команда: Пока без названия
 Ссылка на Google Disk: https://drive.google.com/drive/folders/1KjRhedxerQenK1aI5kppFEcr-Ygyuk6m?usp=drive_link
 
-Веса, датасеты, графики и др. файлы, которые по некоторым причинам не поместились в репозиторий лежат на гугл диске.
+Веса, датасеты, графики и др. файлы, которые по некоторым причинам не поместились в репозиторий лежат на гугл диске
