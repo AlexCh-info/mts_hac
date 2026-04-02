@@ -92,7 +92,8 @@ mts_hac/
 
 ## Шаг 4 - Визуализация (`web_visualization_module`)
 
-Интерактивная карта финального датасета и отдельным слоем с кластеризацией по зонам: https://verbify.icu /n
+Интерактивная карта финального датасета и отдельным слоем с кластеризацией по зонам: https://verbify.icu
+
 [Презентация кейса](https://docs.google.com/presentation/d/1pI3oSFmwhHRiRCQE4fQjtKMmgNQuQ5fXuIAlZd8H0WU/edit?usp=sharing)
 
 ---
