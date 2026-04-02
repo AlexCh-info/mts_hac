@@ -3,7 +3,7 @@
 # МТС True Tech | Changellenge Cup IT 2026
 # Команда: "Пока без названия"
 # Результат кейс-чемпионата: Команда "Пока без названия" - 4 место.
-Ссылка на презентацию кейса: https://docs.google.com/presentation/d/1pI3oSFmwhHRiRCQE4fQjtKMmgNQuQ5fXuIAlZd8H0WU/edit?slide=id.p12#slide=id.p12
+# [Ссылка на презентацию кейса:](https://docs.google.com/presentation/d/1pI3oSFmwhHRiRCQE4fQjtKMmgNQuQ5fXuIAlZd8H0WU/edit?usp=sharing)
 
 ---
 
